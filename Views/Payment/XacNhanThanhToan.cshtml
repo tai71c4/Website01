@@ -1,0 +1,110 @@
+@model WebsiteBanPhuKien.Models.ViewModels.ThanhToanViewModel
+@{
+    ViewData["Title"] = "Xác nhận thanh toán";
+}
+
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Xác nhận thanh toán đơn hàng #@Model.MaDon</h4>
+                </div>
+                <div class="card-body">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger">
+                            <ul>
+                                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                {
+                                    <li>@error.ErrorMessage</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="alert alert-info">
+                        <p><strong>Tổng tiền:</strong> @Model.TongTien.ToString("N0") đ</p>
+                        <p><strong>Trạng thái:</strong> @Model.TrangThai</p>
+                        <p class="mb-0"><strong>Lưu ý:</strong> Vui lòng tải lên ảnh chụp màn hình xác nhận đã chuyển tiền thành công để admin có thể kiểm tra và xác nhận đơn hàng của bạn.</p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Thanh toán MoMo</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img src="/img/momo-qr.png" alt="MoMo QR" class="img-fluid mb-2" style="max-height: 200px;">
+                                    <p class="mb-0">Quét mã QR để thanh toán</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Thanh toán ZaloPay</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img src="/img/zalopay-qr.jpg" alt="ZaloPay QR" class="img-fluid mb-2" style="max-height: 200px;">
+                                    <p class="mb-0">Quét mã QR để thanh toán</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form asp-action="XacNhanThanhToan" method="post" enctype="multipart/form-data">
+                        <input type="hidden" asp-for="MaDon" />
+                        
+                        <div class="mb-3">
+                            <label asp-for="PhuongThucThanhToan" class="form-label">Phương thức thanh toán</label>
+                            <select asp-for="PhuongThucThanhToan" class="form-select">
+                                <option value="MoMo">MoMo</option>
+                                <option value="ZaloPay">ZaloPay</option>
+                                <option value="Chuyển khoản ngân hàng">Chuyển khoản ngân hàng</option>
+                            </select>
+                            <span asp-validation-for="PhuongThucThanhToan" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="AnhThanhToan" class="form-label">Ảnh xác nhận thanh toán <span class="text-danger">*</span></label>
+                            <input asp-for="AnhThanhToan" type="file" class="form-control" accept="image/*" required />
+                            <div id="imagePreview" class="mt-2"></div>
+                            <span asp-validation-for="AnhThanhToan" class="text-danger"></span>
+                            <small class="form-text text-muted">Vui lòng tải lên ảnh chụp màn hình xác nhận đã chuyển tiền thành công.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="GhiChu" class="form-label">Ghi chú (nếu có)</label>
+                            <textarea asp-for="GhiChu" class="form-control" rows="3" placeholder="Nhập thông tin bổ sung về giao dịch thanh toán nếu cần"></textarea>
+                            <span asp-validation-for="GhiChu" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Xác nhận thanh toán</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Hiển thị ảnh xem trước khi chọn file
+            $('#AnhThanhToan').change(function() {
+                var file = this.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#imagePreview').html('<img src="' + e.target.result + '" class="img-thumbnail" style="max-height: 200px;">');
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+    </script>
+}

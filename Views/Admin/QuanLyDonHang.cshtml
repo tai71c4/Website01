@@ -1,0 +1,320 @@
+@model IEnumerable<WebsiteBanPhuKien.Models.DonHang>
+@{
+    ViewData["Title"] = "Quản lý đơn hàng";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid">
+    <h1 class="mb-4">Quản lý đơn hàng</h1>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Danh sách đơn hàng</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Ngày đặt</th>
+                            <th>Tổng tiền</th>
+                            <th>Thanh toán</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null)
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@item.MaDon</td>
+                                    <td>@(item.User?.HoTen ?? "Không có")</td>
+                                    <td>@item.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@item.TongTien.ToString("N0") đ</td>
+                                    <td>
+                                        @if (item.ThanhToan)
+                                        {
+                                            <span class="badge bg-success">Đã thanh toán</span>
+                                        }
+                                        else if (!string.IsNullOrEmpty(item.AnhThanhToan))
+                                        {
+                                            <span class="badge bg-warning">Chờ xác nhận</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Chưa thanh toán</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge @(item.TrangThai == "Đã giao" ? "bg-success" : 
+                                                            item.TrangThai == "Đang giao" ? "bg-info" : 
+                                                            item.TrangThai == "Đang xử lý" ? "bg-primary" : 
+                                                            item.TrangThai == "Đã hủy" ? "bg-danger" : "bg-warning")">
+                                            @item.TrangThai
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info view-btn" data-id="@item.MaDon">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-primary status-btn" data-id="@item.MaDon" data-status="@item.TrangThai">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        @if (!string.IsNullOrEmpty(item.AnhThanhToan) && !item.ThanhToan)
+                                        {
+                                            <button class="btn btn-sm btn-success payment-confirm-btn" data-id="@item.MaDon">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger payment-reject-btn" data-id="@item.MaDon">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Chi tiết đơn hàng -->
+<div class="modal fade" id="chiTietDonHangModal" tabindex="-1" aria-labelledby="chiTietDonHangModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="chiTietDonHangModalLabel">Chi tiết đơn hàng #<span id="maDonHang"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Thông tin đơn hàng</h6>
+                        <p><strong>Ngày đặt:</strong> <span id="ngayDat"></span></p>
+                        <p><strong>Tổng tiền:</strong> <span id="tongTien"></span></p>
+                        <p><strong>Trạng thái:</strong> <span id="trangThai"></span></p>
+                        <p><strong>Thanh toán:</strong> <span id="thanhToan"></span></p>
+                        <p><strong>Phương thức thanh toán:</strong> <span id="phuongThucThanhToan"></span></p>
+                        <p><strong>Ngày thanh toán:</strong> <span id="ngayThanhToan"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Thông tin khách hàng</h6>
+                        <p><strong>Họ tên:</strong> <span id="hoTen"></span></p>
+                        <p><strong>Email:</strong> <span id="email"></span></p>
+                        <p><strong>Số điện thoại:</strong> <span id="soDienThoai"></span></p>
+                    </div>
+                </div>
+                
+                <div id="anhThanhToanContainer" class="mb-3" style="display: none;">
+                    <h6>Ảnh xác nhận thanh toán</h6>
+                    <img id="anhThanhToan" src="" alt="Ảnh thanh toán" class="img-fluid img-thumbnail" style="max-height: 300px;">
+                </div>
+
+                <h6>Chi tiết sản phẩm</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>Đơn giá</th>
+                                <th>Số lượng</th>
+                                <th class="text-end">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chiTietSanPham">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cập nhật trạng thái -->
+<div class="modal fade" id="capNhatTrangThaiModal" tabindex="-1" aria-labelledby="capNhatTrangThaiModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="CapNhatTrangThaiDonHang" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="capNhatTrangThaiModalLabel">Cập nhật trạng thái đơn hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="donHangId" name="id">
+                    <div class="mb-3">
+                        <label for="trangThaiSelect" class="form-label">Trạng thái</label>
+                        <select class="form-select" id="trangThaiSelect" name="trangThai">
+                            <option value="Chờ xác nhận">Chờ xác nhận</option>
+                            <option value="Đang xử lý">Đang xử lý</option>
+                            <option value="Đang giao">Đang giao</option>
+                            <option value="Đã giao">Đã giao</option>
+                            <option value="Đã hủy">Đã hủy</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Xác nhận thanh toán -->
+<div class="modal fade" id="xacNhanThanhToanModal" tabindex="-1" aria-labelledby="xacNhanThanhToanModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Admin" asp-action="XacNhanThanhToan" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="xacNhanThanhToanModalLabel">Xác nhận thanh toán</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="donHangIdThanhToan" name="id">
+                    <p>Bạn có chắc chắn muốn xác nhận thanh toán cho đơn hàng này?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">Xác nhận</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Từ chối thanh toán -->
+<div class="modal fade" id="tuChoiThanhToanModal" tabindex="-1" aria-labelledby="tuChoiThanhToanModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Admin" asp-action="TuChoiThanhToan" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tuChoiThanhToanModalLabel">Từ chối thanh toán</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="donHangIdTuChoi" name="id">
+                    <div class="mb-3">
+                        <label for="lyDo" class="form-label">Lý do từ chối</label>
+                        <textarea class="form-control" id="lyDo" name="lyDo" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Từ chối</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Khởi tạo DataTable
+            $('#dataTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/vi.json'
+                },
+                order: [[2, 'desc']] // Sắp xếp theo ngày đặt, mới nhất lên đầu
+            });
+            
+            // Xử lý nút xem chi tiết
+            $('.view-btn').click(function() {
+                var id = $(this).data('id');
+                
+                // Gọi API để lấy thông tin đơn hàng
+                $.ajax({
+                    url: '/Admin/GetDonHang/' + id,
+                    type: 'GET',
+                    success: function(data) {
+                        $('#maDonHang').text(data.maDon);
+                        $('#ngayDat').text(new Date(data.ngayDat).toLocaleString());
+                        $('#tongTien').text(new Intl.NumberFormat('vi-VN').format(data.tongTien) + ' đ');
+                        $('#trangThai').text(data.trangThai);
+                        $('#thanhToan').text(data.thanhToan ? 'Đã thanh toán' : 'Chưa thanh toán');
+                        
+                        // Thông tin phương thức thanh toán
+                        $('#phuongThucThanhToan').text(data.phuongThucThanhToan || 'Không có');
+                        $('#ngayThanhToan').text(data.ngayThanhToan ? new Date(data.ngayThanhToan).toLocaleString() : 'Chưa thanh toán');
+                        
+                        // Hiển thị ảnh thanh toán nếu có
+                        if (data.anhThanhToan) {
+                            $('#anhThanhToanContainer').show();
+                            $('#anhThanhToan').attr('src', data.anhThanhToan);
+                        } else {
+                            $('#anhThanhToanContainer').hide();
+                        }
+                        
+                        // Thông tin khách hàng
+                        $('#hoTen').text(data.user ? data.user.hoTen : 'Không có');
+                        $('#email').text(data.user ? data.user.email : 'Không có');
+                        $('#soDienThoai').text(data.user ? data.user.phoneNumber : 'Không có');
+                        
+                        // Chi tiết sản phẩm
+                        var chiTietHtml = '';
+                        if (data.chiTietDonHangs && data.chiTietDonHangs.length > 0) {
+                            data.chiTietDonHangs.forEach(function(item) {
+                                chiTietHtml += '<tr>';
+                                chiTietHtml += '<td>' + (item.phuKien ? item.phuKien.tenPhuKien : 'Sản phẩm không còn tồn tại') + '</td>';
+                                chiTietHtml += '<td>' + new Intl.NumberFormat('vi-VN').format(item.donGia) + ' đ</td>';
+                                chiTietHtml += '<td>' + item.soLuong + '</td>';
+                                chiTietHtml += '<td class="text-end">' + new Intl.NumberFormat('vi-VN').format(item.donGia * item.soLuong) + ' đ</td>';
+                                chiTietHtml += '</tr>';
+                            });
+                        } else {
+                            chiTietHtml = '<tr><td colspan="4" class="text-center">Không có dữ liệu</td></tr>';
+                        }
+                        $('#chiTietSanPham').html(chiTietHtml);
+                        
+                        $('#chiTietDonHangModal').modal('show');
+                    },
+                    error: function() {
+                        alert('Không thể lấy thông tin đơn hàng');
+                    }
+                });
+            });
+            
+            // Xử lý nút cập nhật trạng thái
+            $('.status-btn').click(function() {
+                var id = $(this).data('id');
+                var status = $(this).data('status');
+                
+                $('#donHangId').val(id);
+                $('#trangThaiSelect').val(status);
+                $('#capNhatTrangThaiModal').modal('show');
+            });
+            
+            // Xử lý nút xác nhận thanh toán
+            $('.payment-confirm-btn').click(function() {
+                var id = $(this).data('id');
+                $('#donHangIdThanhToan').val(id);
+                $('#xacNhanThanhToanModal').modal('show');
+            });
+            
+            // Xử lý nút từ chối thanh toán
+            $('.payment-reject-btn').click(function() {
+                var id = $(this).data('id');
+                $('#donHangIdTuChoi').val(id);
+                $('#tuChoiThanhToanModal').modal('show');
+            });
+        });
+    </script>
+}

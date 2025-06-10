@@ -1,0 +1,189 @@
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+
+<link rel="stylesheet" href="~/css/home.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/product.css" asp-append-version="true" />
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h1 class="hero-title">Phụ kiện chính hãng chất lượng cao</h1>
+                <p class="hero-subtitle">Đa dạng mẫu mã, giá cả hợp lý, bảo hành chính hãng</p>
+                <a href="@Url.Action("DanhSach", "Product")" class="btn btn-primary btn-lg">Mua ngay</a>
+            </div>
+            <div class="col-md-6">
+                <img src="~/img/banners/banner1 (2).jpg" alt="Banner" class="img-fluid hero-image">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Categories -->
+<section class="featured-categories">
+    <div class="container">
+        <h2 class="section-title">Danh mục nổi bật</h2>
+        <div class="row justify-content-center">
+            @if (ViewBag.DanhMucNoiBat != null)
+            {
+                foreach (var danhMuc in ViewBag.DanhMucNoiBat)
+                {
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+                        @{
+                            // Lấy ID loại phụ kiện dựa trên tên danh mục
+                            int? loaiId = null;
+                            if (ViewBag.LoaiPhuKienMap != null && ViewBag.LoaiPhuKienMap.ContainsKey(danhMuc))
+                            {
+                                loaiId = ViewBag.LoaiPhuKienMap[danhMuc];
+                            }
+                            
+                            // Nếu không có ID, chuyển hướng đến trang danh sách sản phẩm
+                            string actionName = loaiId.HasValue ? "TheoLoai" : "DanhSach";
+                            object? routeValues = loaiId.HasValue ? new { id = loaiId.Value } : null;
+                        }
+                        <a href="@Url.Action(actionName, "Product", routeValues)" class="text-decoration-none">
+                            <div class="category-card">
+                                <div class="category-icon">
+                                    @{
+                                        string iconClass = "fas fa-mobile-alt";
+                                        switch (danhMuc)
+                                        {
+                                            case "Ốp lưng điện thoại":
+                                                iconClass = "fas fa-mobile-alt";
+                                                break;
+                                            case "Kính và cường lực":
+                                                iconClass = "fas fa-shield-alt";
+                                                break;
+                                            case "Cáp sạc & củ sạc":
+                                                iconClass = "fas fa-plug";
+                                                break;
+                                            case "Pin dự phòng":
+                                                iconClass = "fas fa-battery-full";
+                                                break;
+                                            case "Tai nghe & âm thanh":
+                                                iconClass = "fas fa-headphones";
+                                                break;
+                                        }
+                                    }
+                                    <i class="@iconClass"></i>
+                                </div>
+                                <div class="category-body">
+                                    <h5 class="category-title">@danhMuc</h5>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+<!-- New Products -->
+<section class="new-products">
+    <div class="container">
+        <h2 class="section-title">Sản phẩm mới</h2>
+        <div class="row">
+            @if (ViewBag.SanPhamMoi != null)
+            {
+                foreach (var item in ViewBag.SanPhamMoi)
+                {
+                    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                        <div class="product-card">
+                            <div class="product-image-container">
+                                <a href="@Url.Action("ChiTiet", "Product", new { id = item.MaPhuKien })">
+                                    <img src="@item.HinhAnh" alt="@item.TenPhuKien" class="product-image" />
+                                </a>
+                            </div>
+                            <div class="product-body">
+                                <h5 class="product-title">
+                                    <a href="@Url.Action("ChiTiet", "Product", new { id = item.MaPhuKien })">@item.TenPhuKien</a>
+                                </h5>
+                                <p class="product-price">@item.Gia.ToString("N0") đ</p>
+                                <div class="product-footer">
+                                    <form asp-controller="Cart" asp-action="ThemVaoGioHang" method="post">
+                                        <input type="hidden" name="maPhuKien" value="@item.MaPhuKien" />
+                                        <input type="hidden" name="soLuong" value="1" />
+                                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                                            <i class="fas fa-shopping-cart me-1"></i> Thêm vào giỏ
+                                        </button>
+                                    </form>
+                                    <div class="product-buttons">
+                                        <a href="@Url.Action("MuaNgay", "Order", new { id = item.MaPhuKien })" class="btn btn-warning btn-sm">
+                                            <i class="fas fa-bolt me-1"></i> Mua ngay
+                                        </a>
+                                        <a href="@Url.Action("ChiTiet", "Product", new { id = item.MaPhuKien })" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-eye me-1"></i> Chi tiết
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Latest News -->
+<section class="latest-news">
+    <div class="container">
+        <h2 class="section-title">Tin tức mới nhất</h2>
+        <div class="row">
+            @if (ViewBag.TinTucMoi != null)
+            {
+                foreach (var item in ViewBag.TinTucMoi)
+                {
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <img src="@item.HinhAnh" class="card-img-top" alt="@item.TieuDe" 
+                                 onerror="this.src='/img/news/default.jpg'">
+                            <div class="card-body">
+                                <h5 class="card-title">@item.TieuDe</h5>
+                                <p class="card-text">@(item.TomTat?.Length > 100 ? item.TomTat.Substring(0, 100) + "..." : item.TomTat)</p>
+                                <a href="@Url.Action("ChiTiet", "News", new { id = item.MaTin })" class="btn btn-outline-primary">Đọc thêm</a>
+                            </div>
+                            <div class="card-footer text-muted">
+                                <small>@item.NgayDang.ToString("dd/MM/yyyy")</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Partners -->
+<section class="partners-section">
+    <div class="container">
+        <h2 class="section-title">Đối tác của chúng tôi</h2>
+        <div class="row">
+            <div class="col-md-2 col-4 mb-4">
+                <img src="~/img/partners/apple.png" alt="Apple" class="partner-logo">
+            </div>
+            <div class="col-md-2 col-4 mb-4">
+                <img src="~/img/partners/samsung.png" alt="Samsung" class="partner-logo">
+            </div>
+            <div class="col-md-2 col-4 mb-4">
+                <img src="~/img/partners/sony.png" alt="Sony" class="partner-logo">
+            </div>
+            <div class="col-md-2 col-4 mb-4">
+                <img src="~/img/partners/oppo.png" alt="Oppo" class="partner-logo">
+            </div>
+            <div class="col-md-2 col-4 mb-4">
+                <img src="~/img/partners/vivo.png" alt="Vivo" class="partner-logo">
+            </div>
+            <div class="col-md-2 col-4 mb-4">
+                <img src="~/img/partners/realme.png" alt="Realme" class="partner-logo">
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/home.js" asp-append-version="true"></script>
+}
